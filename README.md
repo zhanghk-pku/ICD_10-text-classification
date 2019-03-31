@@ -3,7 +3,7 @@ This code is for medical home page ICD-10 main diagnose code classification base
 
 ## data description
 Because the whole data is private, it is not available for public. We offer the sample data, which is seen in sample_data.csv
-The data includes 7 feature text data (chief complaint, present illness history, examination report, first progress note, operation record, whole progress note, discharge records) and the label(ICD-10 diagnose code). All the chinese text data have been tokenized by jieba tokenizer.
+The data includes 7 feature text data (chief complaint, present illness history, examination report, first progress note, operation record, ward-round records, discharge records) and the label(ICD-10 diagnose code). All the chinese text data have been tokenized by jieba tokenizer.
 ## load_data.py
 Code for loading and preprocessing data.
 ## model.py
