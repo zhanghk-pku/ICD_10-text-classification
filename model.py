@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 class Models(object):
     def __init__(self, vocab_size, num_classes, word_emb_dim, feature_emb_dim, add_feature, seq_length,
@@ -82,6 +83,13 @@ class Models(object):
                 h = k + batch_size
                 sess.run(optim, feed_dict={input_x: train_x[k:h], input_y: train_y[k:h],
                                            mask_x: mask_train[k:h]})
+                
                 if i % 5 == 0:
-                    accuracy = sess.run(acc, feed_dict={input_x: test_x, input_y: test_y, mask_x: mask_test})
-                    print('the {} batch, the test accuracy is {}'.format(i, accuracy))
+                    test_acc = []
+                    for j in range(int(len(test_x) / batch_size)):
+                        m = batch_size * j
+                        n = m + batch_size
+                        accuracy = sess.run(acc, feed_dict={input_x: test_x[m:n], input_y: test_y[m:n],
+                                                            mask_x: mask_test[m:n]})
+                        test_acc.append(accuracy)
+                    print('the {} batch, the test accuracy is {}'.format(i, np.mean(test_acc)))
