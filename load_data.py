@@ -106,16 +106,23 @@ class LoadData(object):
 
         print('split train-test data ...')
         test_size = int(len(x_padding) * test_rate)
-        test_id = random.sample(range(0, len(x_padding)), test_size)
-        test_x = [x_padding[i] for i in test_id]
-        test_y = [y_one_hot[i] for i in test_id]
-        mask_test = [mask_matrix[i] for i in test_id]
-        for i in range(len(test_id)):
-            x_padding.remove(test_x[i])
-            y_one_hot.remove(test_y[i])
-            mask_matrix.remove(mask_test[i])
+        random.seed(24)
+        random.shuffle(x_padding)
+        random.seed(24)
+        random.shuffle(y_one_hot)
+        random.seed(24)
+        random.shuffle(mask_matrix)
 
-        return x_padding, y_one_hot, test_x, test_y, mask_matrix, mask_test
+        t0 = time.time()
+        x_train = x_padding[:-test_size]
+        y_train = y_one_hot[:-test_size]
+        x_test = x_padding[-test_size:]
+        y_test = y_one_hot[-test_size:]
+        mask_train = mask_matrix[:-test_size]
+        mask_test = mask_matrix[-test_size:]
+        t1 = time.time()
+        print('split time: {}'.format(t1 - t0))
+        return x_train, y_train, x_test, y_test, mask_train, mask_test
 
     def extrac_keywords(self, keyword_num):
         print('extract key words ...')
