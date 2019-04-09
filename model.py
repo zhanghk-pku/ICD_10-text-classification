@@ -16,16 +16,19 @@ class Models(object):
         self.add_keyword_attention = add_keyword_attention
 
     def lstm_model(self, train_x, train_y, test_x, test_y, keyword_id, mask_train, mask_test,
-                   num_layers, batch_size, learning_rate):
+                   num_layers, batch_size, learning_rate,num_epochs):
         tf.reset_default_graph()
-        word_embeddings = tf.get_variable('word_embeddings', shape=[self.vocab_size + 1, self.word_emb_dim], dtype=tf.float32)
+        word_embeddings = tf.get_variable('word_embeddings', shape=[self.vocab_size + 1, self.word_emb_dim],
+                                          initializer=tf.truncated_normal_initializer(stddev=0.01),dtype=tf.float32)
         mask_x = tf.placeholder(tf.float32, [None, self.seq_length, self.hidden_dim])
         input_y = tf.placeholder(tf.float32, [None, self.num_classes])
 
         with tf.variable_scope('embedding_layer'):
             if self.add_feature:
                 input_x = tf.placeholder(tf.int32, [None, self.seq_length, 2])
-                feature_embeddings = tf.get_variable('feature_embeddings',[self.num_features + 1, self.feature_emb_dim])
+                feature_embeddings = tf.get_variable('feature_embeddings',[self.num_features + 1, self.feature_emb_dim],
+                                                     initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                                     dtype=tf.float32)
                 input_word_emb = tf.nn.embedding_lookup(word_embeddings, input_x[:, :, 0])
                 input_feature_emb = tf.nn.embedding_lookup(feature_embeddings, input_x[:, :, 1])
                 input_emb = tf.concat([input_word_emb, input_feature_emb], 2)
@@ -44,14 +47,19 @@ class Models(object):
         if self.add_keyword_attention:
             keyword_emb = tf.nn.embedding_lookup(word_embeddings, keyword_id)
             with tf.variable_scope('attention'):
-                atten_weight = tf.get_variable('atten_weight',[self.word_emb_dim, self.hidden_dim], dtype=tf.float32)
-                trans_keyword_emb = tf.tensordot(keyword_emb, atten_weight, axes=1)
+                atten_weight = tf.get_variable('atten_weight',[self.word_emb_dim, self.hidden_dim],
+                                               initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                               dtype=tf.float32)
+                trans_keyword_emb = tf.matmul(keyword_emb, atten_weight)
                 atten_dot = tf.tensordot(first_outputs, tf.transpose(trans_keyword_emb), axes=1)
                 alphas = tf.nn.softmax(atten_dot)
                 atten_outputs = tf.reduce_sum(tf.expand_dims(alphas, -1) * trans_keyword_emb, 2)
+                print(atten_outputs.shape)
 
             with tf.variable_scope('concate'):
                 concate_inputs = tf.concat([input_emb, atten_outputs], 2)
+                print(concate_inputs.shape)
+                print(concate_inputs.get_shape())
 
             with tf.variable_scope('second_lstm'):
                 cell_2 = tf.contrib.rnn.BasicLSTMCell(self.hidden_dim, state_is_tuple=True)
@@ -64,6 +72,7 @@ class Models(object):
             last = tf.reduce_mean(first_outputs, axis=1)
 
         with tf.variable_scope('full_connect_layer'):
+            # fc_1 = tf.layers.dense(last, self.hidden_dim,activation=tf.nn.relu)
             logit = tf.layers.dense(last, self.num_classes)
             y_pred = tf.argmax(tf.nn.softmax(logit), 1)
 
@@ -78,18 +87,31 @@ class Models(object):
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            for i in range(int(len(train_x) / batch_size)):
-                k = batch_size * i
-                h = k + batch_size
-                sess.run(optim, feed_dict={input_x: train_x[k:h], input_y: train_y[k:h],
-                                           mask_x: mask_train[k:h]})
-                
-                if i % 5 == 0:
-                    test_acc = []
-                    for j in range(int(len(test_x) / batch_size)):
-                        m = batch_size * j
-                        n = m + batch_size
-                        accuracy = sess.run(acc, feed_dict={input_x: test_x[m:n], input_y: test_y[m:n],
-                                                            mask_x: mask_test[m:n]})
-                        test_acc.append(accuracy)
-                    print('the {} batch, the test accuracy is {}'.format(i, np.mean(test_acc)))
+            for t in range(num_epochs):
+                for i in range(int(len(train_x) / batch_size)+1):
+                    k = batch_size * i
+                    h = k + batch_size
+
+                    train_pred_y, train_loss, _ = sess.run([y_pred, loss, optim], feed_dict={input_x: train_x[k:h], input_y: train_y[k:h],
+                                               mask_x: mask_train[k:h]})
+                    if i % 100 == 0:
+                        print('batch {}, training loss = {}'.format(i, train_loss))
+                        print('   train:')
+                        print('   true label:', np.argmax(train_y[k:k + 15], axis=1))
+                        print('   pred label:', train_pred_y[:15])
+                    if i % 100 == 0:
+                        test_acc = []
+                        test_loss = []
+                        for j in range(int(len(test_x) / batch_size)+1):
+                            m = batch_size * j
+                            n = m + batch_size
+                            t_loss, accuracy, test_pred_y = sess.run([loss, acc, y_pred], feed_dict={input_x: test_x[m:n], input_y: test_y[m:n],
+                                                                mask_x: mask_test[m:n]})
+                            if j % 100 == 0:
+                                print('   test:')
+                                print('   true label:', np.argmax(test_y[m:m+15], axis=1))
+                                print('   pred label:', test_pred_y[:15])
+                            test_acc.append(accuracy)
+                            test_loss.append(t_loss)
+                        print('   test loss = {}, test accuracy is {}'.format(np.mean(test_loss), np.mean(test_acc)))
+                        print('-----------------------------------------------------')
