@@ -4,9 +4,11 @@ This code is for medical home page ICD-10 main diagnose code classification base
 ## Experiment results
 ```
                                                    10 classes accuracy           81 classes accuracy
-LSTM                                                     0.7819                         0.5355
-LSTM + feature embedding                                 0.8080                         0.5671
-LSTM + feature embedding + keyword attention             0.8502                         0.5964
+LSTM                                                     0.8326                         0.5355
+LSTM + feat_emb                                          0.8515                         0.5671
+LSTM + feat_emb + keyword_atten                          0.8728                         0.5964
+LSTM + feat_emb + keyword_atten + second_atten           0.8950
+baseline(HA-GRU)                                         0.9151
 ```
 ## data description
 Because the whole data is private, it is not available for public. We offer the sample data, which is seen in sample_data.csv
