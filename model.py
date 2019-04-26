@@ -130,7 +130,7 @@ class Models(object):
                                                                                              input_seqlen: batch_seqlen})
                     if i % 100 == 0:
                         print('batch {}, training loss = {}'.format(i, train_loss))
-                    if i % 100 == 0:
+                    if i % 500 == 0:
                         test_acc = []
                         test_loss = []
                         for j in range(int(len(test_x) / batch_size)):
